@@ -21,6 +21,12 @@ public class Tower<T> where T : IPrintable, IComparable<T>
         return _elements.Pop();
     }
 
+    public T Peek()
+    {
+        if (IsTowerEmpty()) throw new EmptyTowerException("The tower is empty.");
+        return _elements.Peek();
+    }
+
     private bool IsMoveValid(T element) => !IsTowerEmpty() && _elements.Peek().CompareTo(element) <= 0;
     private bool IsTowerEmpty() => _elements.Count == 0;
 
