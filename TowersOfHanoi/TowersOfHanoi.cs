@@ -54,8 +54,9 @@ public class TowersOfHanoi
 
         try
         {
-            var disk = sourceTower.Pop();
+            var disk = sourceTower.Peek();
             destinationTower.Push(disk);
+            sourceTower.Pop();
         }
         catch (Exception ex)
         {
@@ -79,9 +80,9 @@ public class TowersOfHanoi
     {
         return tower switch
         {
-            Towers.A => _towers[0],
-            Towers.B => _towers[1],
-            Towers.C => _towers[2]
+            Towers.Left => _towers[0],
+            Towers.Middle => _towers[1],
+            Towers.Right => _towers[2]
         };
     }
 

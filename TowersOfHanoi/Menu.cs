@@ -22,5 +22,4 @@ public class Menu
                 .AddChoices(Enum.GetValues<MenuOptions>())
         );
     }
-
 }
