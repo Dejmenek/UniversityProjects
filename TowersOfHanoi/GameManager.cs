@@ -28,13 +28,13 @@ public class GameManager
                     exit = true;
                     break;
             }
-            Console.Clear();
+            ClearScreen();
         }
     }
 
     private void StartNewGame()
     {
-        Console.Clear();
+        ClearScreen();
         int disksNumber = AnsiConsole.Prompt(
                 new TextPrompt<int>("How many disks would you like to play with?")
                 .Validate(n => n switch
@@ -49,6 +49,7 @@ public class GameManager
 
     private void ShowInstructions()
     {
+        ClearScreen();
         AnsiConsole.Write("The goal of the game is to move all the disks from the first tower to the third tower, following these rules:\n"
             + "1. Only one disk can be moved at a time.\n"
             + "2. A disk can only be placed on an empty tower or on top of a larger disk.\n"
@@ -57,4 +58,6 @@ public class GameManager
         );
         Console.ReadKey();
     }
+
+    private void ClearScreen() => Console.Clear();
 }
