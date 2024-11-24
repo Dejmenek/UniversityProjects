@@ -8,7 +8,7 @@ public class Tower<T> where T : IPrintable, IComparable<T>
 
     public void Push(T element)
     {
-        if (_elements.Count > 0 && _elements.Peek().CompareTo(element) <= 0)
+        if (IsMoveValid(element))
         {
             throw new LargerOnSmallerElementException("Cannot place a larger element on a smaller one.");
         }
@@ -17,13 +17,16 @@ public class Tower<T> where T : IPrintable, IComparable<T>
 
     public T Pop()
     {
-        if (_elements.Count == 0) throw new EmptyTowerException("The tower is empty.");
+        if (IsTowerEmpty()) throw new EmptyTowerException("The tower is empty.");
         return _elements.Pop();
     }
 
+    private bool IsMoveValid(T element) => !IsTowerEmpty() && _elements.Peek().CompareTo(element) <= 0;
+    private bool IsTowerEmpty() => _elements.Count == 0;
+
     public void Print()
     {
-        if (_elements.Count == 0)
+        if (IsTowerEmpty())
         {
             Console.Write("[  ]");
         }
