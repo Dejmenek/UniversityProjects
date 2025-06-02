@@ -25,3 +25,11 @@ def load_to_postgres(df: pd.DataFrame, table_name: str, db_url: str, index: bool
         raise
     finally:
         engine.dispose()
+
+
+def read_from_postgres(table_name: str, db_url: str, columns: list[str] = None) -> pd.DataFrame:
+    engine = sqlalchemy.create_engine(db_url)
+    cols = "*" if columns is None else ", ".join(columns)
+    query = f"SELECT {cols} FROM {table_name}"
+
+    return pd.read_sql(query, engine)
