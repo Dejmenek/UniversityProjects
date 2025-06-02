@@ -1,13 +1,27 @@
 import sqlalchemy
-import pandas
+import pandas as pd
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
-def load_to_postgres(df: pandas.DataFrame, table_name: str, db_url: str, index: bool):
+def load_to_postgres(df: pd.DataFrame, table_name: str, db_url: str, index: bool = False) -> None:
     engine = sqlalchemy.create_engine(db_url)
-
-    df.to_sql(
-        table_name,
-        engine,
-        if_exists="append",
-        index=index,
-        method="multi"
-    )
+    try:
+        with engine.begin() as connection:
+            df.to_sql(
+                name=table_name,
+                con=connection,
+                if_exists="replace" if not index else "append",
+                index=False,
+                method="multi"
+            )
+        print(f"✅ Successfully loaded data into '{table_name}' table.")
+    except IntegrityError as ie:
+        print(f"⚠️ IntegrityError: {ie.orig}")
+        raise
+    except SQLAlchemyError as e:
+        print(f"❌ SQLAlchemyError: {str(e)}")
+        raise
+    except Exception as e:
+        print(f"❌ Unexpected error: {str(e)}")
+        raise
+    finally:
+        engine.dispose()
