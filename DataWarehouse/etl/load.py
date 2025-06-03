@@ -2,15 +2,13 @@ import sqlalchemy
 import pandas as pd
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
-def load_to_postgres(df: pd.DataFrame, table_name: str, db_url: str, index: bool = False) -> None:
-    engine = sqlalchemy.create_engine(db_url)
+def load_to_postgres(df: pd.DataFrame, table_name: str, connection: sqlalchemy.Connection, index: bool = False) -> None:
     try:
-        with engine.begin() as connection:
-            df.to_sql(
+        df.to_sql(
                 name=table_name,
                 con=connection,
-                if_exists="replace" if not index else "append",
-                index=False,
+                if_exists="append",
+                index=index,
                 method="multi"
             )
         print(f"✅ Successfully loaded data into '{table_name}' table.")
@@ -23,13 +21,10 @@ def load_to_postgres(df: pd.DataFrame, table_name: str, db_url: str, index: bool
     except Exception as e:
         print(f"❌ Unexpected error: {str(e)}")
         raise
-    finally:
-        engine.dispose()
 
 
-def read_from_postgres(table_name: str, db_url: str, columns: list[str] = None) -> pd.DataFrame:
-    engine = sqlalchemy.create_engine(db_url)
+def read_from_postgres(table_name: str, connection: sqlalchemy.Connection, columns: list[str] = None) -> pd.DataFrame:
     cols = "*" if columns is None else ", ".join(columns)
     query = f"SELECT {cols} FROM {table_name}"
 
-    return pd.read_sql(query, engine)
+    return pd.read_sql(query, connection)
