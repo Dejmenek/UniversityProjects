@@ -182,12 +182,11 @@ def transform_flight_data(df: pd.DataFrame) -> None:
     engine = sqlalchemy.create_engine(c.DB_URL)
     try:
         with engine.begin() as connection:
-            # prepare_dimensions(df, connection)
-            # prepare_facts(df, connection)
-            prepare_flights(df, connection)
-        print("✅ All data successfully loaded in a single transaction.")
+            prepare_dimensions(df, connection)
+            prepare_facts(df, connection)
+        logging.info("✅ All data successfully loaded in a single transaction.")
     except Exception as e:
-        print(f"❌ Transaction failed. Rolled back. Reason: {str(e)}")
+        logging.error(f"❌ Transaction failed. Rolled back. Reason: {str(e)}")
         raise
     finally:
         engine.dispose()
