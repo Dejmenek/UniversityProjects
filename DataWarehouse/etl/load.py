@@ -1,3 +1,4 @@
+import logging
 import sqlalchemy
 import pandas as pd
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
@@ -11,15 +12,15 @@ def load_to_postgres(df: pd.DataFrame, table_name: str, connection: sqlalchemy.C
                 index=index,
                 method="multi"
             )
-        print(f"✅ Successfully loaded data into '{table_name}' table.")
+        logging.info(f"✅ Successfully loaded data into '{table_name}' table.")
     except IntegrityError as ie:
-        print(f"⚠️ IntegrityError: {ie.orig}")
+        logging.error(f"⚠️ IntegrityError: {ie.orig}")
         raise
     except SQLAlchemyError as e:
-        print(f"❌ SQLAlchemyError: {str(e)}")
+        logging.error(f"❌ SQLAlchemyError: {str(e)}")
         raise
     except Exception as e:
-        print(f"❌ Unexpected error: {str(e)}")
+        logging.error(f"❌ Unexpected error: {str(e)}")
         raise
 
 
