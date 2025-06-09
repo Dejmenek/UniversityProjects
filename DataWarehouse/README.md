@@ -57,5 +57,11 @@ This will:
 Reports include
 
 - Top 10 most popular flight routes
+![image](https://github.com/user-attachments/assets/a5969bac-d603-461f-8755-1cdae667ecef)
+
 - Monthly number of flights
+![image](https://github.com/user-attachments/assets/4bfa2fa1-8c55-4c12-8372-ca511d4f231f)
+
 - Ranking of airports by total traffic
+![image](https://github.com/user-attachments/assets/4b06c100-26c7-4c28-8849-66ff7fff3ca5)
+
