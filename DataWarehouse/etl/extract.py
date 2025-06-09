@@ -1,3 +1,4 @@
+import logging
 import pandas
 
 from constants import DTYPE_DICT
@@ -8,8 +9,8 @@ def load_csv(file_path: str) -> pandas.DataFrame:
         df = pandas.read_csv(file_path, dtype=DTYPE_DICT)
         return df
     except FileNotFoundError:
-        print(f"[ERROR] Plik nie został znaleziony: {file_path}")
+        logging.error(f"❌ File not found: {file_path}")
         raise
     except Exception as e:
-        print(f"[ERROR] Błąd wczytywania pliku: {e}")
+        logging.error(f"❌ File loading error: {e}")
         raise
