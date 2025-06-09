@@ -15,11 +15,11 @@ This project is an end-to-end ETL pipeline and reporting solution for airline fl
 - Python 3.9+
 - PostgreSQL
 - Required Python packages:
-    - pandas
-    - sqlalchemy
-    - seaborn
-    - psycopg2
-    - matplotlib
+  - pandas
+  - sqlalchemy
+  - seaborn
+  - psycopg2
+  - matplotlib
 
 ## 🚀 Usage
 
@@ -27,11 +27,13 @@ This project is an end-to-end ETL pipeline and reporting solution for airline fl
 
 Ensure PostgreSQL is running and you have your credentials set in `constants.py`.
 Then, run the ETL pipeline:
+
 ```bash
-    python ./etl/main.py
+python ./etl/main.py
 ```
 
 This will:
+
 - Parse and validate the CSV
 - Insert dimensions
 - Load fact data
@@ -39,11 +41,13 @@ This will:
 ### 2. Generate Reports
 
 Run reporting script:
+
 ```bash
 python ./reports/generate_reports.py
 ```
 
 This will:
+
 - Execute SQL queries from the `/sql` folder
 - Visualize the data using matplotlib
 - Save the final result as `podsumowanie.pdf`
@@ -51,6 +55,7 @@ This will:
 ## 📊 Sample Reports
 
 Reports include
+
 - Top 10 most popular flight routes
 - Monthly number of flights
 - Ranking of airports by total traffic
