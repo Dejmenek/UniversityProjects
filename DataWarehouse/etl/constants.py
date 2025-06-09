@@ -1,3 +1,5 @@
+import os
+
 PASSENGER_ID_COLUMN = "Passenger ID"
 PASSENGER_FIRST_NAME_COLUMN = "Passenger First Name"
 PASSENGER_LAST_NAME_COLUMN = "Passenger Last Name"
@@ -46,4 +48,18 @@ DTYPE_DICT = {
     FLIGHT_STATUS_COLUMN: "category",
     PILOT_FIRST_NAME_COLUMN: "object",
     PILOT_LAST_NAME_COLUMN: "object"
+}
+
+TOP_ROUTES_QUERY_NAME = "Top 10 Routes"
+MONTHLY_FLIGHTS_QUERY_NAME = "Monthly Flights"
+AIRPORT_TRAFFIC_QUERY_NAME = "Airport Traffic"
+
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+SQL_FOLDER = os.path.join(BASE_DIR, "sql")
+REPORT_OUTPUT = os.path.join(BASE_DIR, "reports", "podsumowanie.pdf")
+
+REPORT_QUERIES = {
+    TOP_ROUTES_QUERY_NAME: "analysis1.sql",
+    MONTHLY_FLIGHTS_QUERY_NAME: "analysis2.sql",
+    AIRPORT_TRAFFIC_QUERY_NAME: "analysis3.sql"
 }
