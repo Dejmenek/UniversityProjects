@@ -1,3 +1,4 @@
+import logging
 from typing import Dict
 import pandas as pd
 import constants as c
@@ -8,73 +9,99 @@ def normalize_text_cells(df: pd.DataFrame) -> None:
     for col in c.TEXT_COLUMNS:
         df[col] = df[col].str.strip().str.title()
 
-def prepare_flights(df: pd.DataFrame, connection: sqlalchemy.Connection) -> None:
-    dates_df = read_from_postgres(c.DATES_TABLE, connection, ["date_id", "full_date"])
-    airports_df = read_from_postgres(c.AIRPORTS_TABLE, connection, ["airport_id", "airport_code"])
-    pilots_df = read_from_postgres(c.PILOTS_TABLE, connection, ["pilot_id", "first_name", "last_name"])
-    passengers_df = read_from_postgres(c.PASSENGERS_TABLE, connection, ["passenger_id", "passenger_code"])
-    flight_statuses_df = read_from_postgres(c.FLIGHT_STATUSES_TABLE, connection, ["status_id", "name"])
+def merge_and_validate(base_df: pd.DataFrame,
+                       dim_df: pd.DataFrame,
+                       left_on_cols: list[str],
+                       right_on_cols: list[str],
+                       dim_id_col: str,
+                       merge_type: str="inner") -> pd.DataFrame:
+        initial_rows = len(base_df)
+        merged_df = base_df.merge(dim_df, how=merge_type, left_on=left_on_cols, right_on=right_on_cols)
+        
+        unmatched_count = merged_df[dim_id_col].isnull().sum()
+        if unmatched_count > 0:
+            logging.warning(f"Found {unmatched_count} rows with no match for '{dim_id_col}'. These rows will be dropped.")
+            merged_df.dropna(subset=[dim_id_col], inplace=True)
+        
+        final_rows = len(merged_df)
+        logging.info(f"Merged on {dim_id_col}. Rows changed from {initial_rows} to {final_rows}.")
+        return merged_df
 
+def prepare_flights(df: pd.DataFrame, connection: sqlalchemy.Connection) -> None:
     flights_df = df.copy()
 
-    flights_df = flights_df.merge(
-        pilots_df,
-        left_on=[c.PILOT_FIRST_NAME_COLUMN, c.PILOT_LAST_NAME_COLUMN],
-        right_on=["first_name", "last_name"]
+    dates_df = read_from_postgres(c.DATES_TABLE, connection, ["date_id", "full_date"])
+    dates_df["full_date_obj"] = pd.to_datetime(dates_df["full_date"]).dt.date
+
+    airports_df = read_from_postgres(c.AIRPORTS_TABLE, connection, ["airport_id", "airport_code"]).astype({"airport_id": "Int64"})
+    pilots_df = read_from_postgres(c.PILOTS_TABLE, connection, ["pilot_id", "first_name", "last_name"]).astype({"pilot_id": "Int64"})
+    passengers_df = read_from_postgres(c.PASSENGERS_TABLE, connection, ["passenger_id", "passenger_code"]).astype({"passenger_id": "Int64"})
+    flight_statuses_df = read_from_postgres(c.FLIGHT_STATUSES_TABLE, connection, ["status_id", "name"]).astype({"status_id": "Int64"})
+
+    flights_df = merge_and_validate(
+        flights_df, pilots_df, 
+        [c.PILOT_FIRST_NAME_COLUMN, c.PILOT_LAST_NAME_COLUMN],
+        ["first_name", "last_name"],
+        "pilot_id",
+        "left"
     )
-    print("After merging pilots:", flights_df.shape)
 
-    flights_df["departure_full_date"] = pd.to_datetime(flights_df[c.DEPARTURE_DATE_COLUMN], format="%m/%d/%Y").dt.strftime("%Y-%m-%d")
-    dates_df["full_date"] = pd.to_datetime(dates_df["full_date"]).dt.strftime("%Y-%m-%d")
-    print("Dates from database:", dates_df["full_date"])
-    print("Dates from file:", flights_df["departure_full_date"])
-    flights_df = flights_df.merge(
-        dates_df,
-        left_on="departure_full_date",
-        right_on="full_date",
-        how="inner"
-    ).rename(columns={"date_id": "departure_date_id"})
-    print("After merging dates:", flights_df.shape)
-
-    flights_df = flights_df.merge(
-        airports_df,
-        left_on=c.DEPARTURE_AIRPORT_CODE_COLUMN,
-        right_on="airport_code",
-        how="inner"
-    ).rename(columns={"airport_id": "departure_airport_id"})
-    print("After merging airports departures:", flights_df.shape)
-
-    flights_df = flights_df.merge(
-        airports_df,
-        left_on=c.ARRIVAL_AIRPORT_CODE_COLUMN,
-        right_on="airport_code",
-        how="inner"
-    ).rename(columns={"airport_id": "arrival_airport_id"})
-    print("After merging airport arrivals:", flights_df.shape)
-
-    flights_df = flights_df.merge(
-        passengers_df,
-        left_on=c.PASSENGER_ID_COLUMN,
-        right_on="passenger_code",
-        how="inner"
+    flights_df["departure_date_obj"] = pd.to_datetime(flights_df[c.DEPARTURE_DATE_COLUMN], format="%m/%d/%Y").dt.date
+    flights_df = merge_and_validate(
+        flights_df, dates_df.rename(columns={"date_id": "departure_date_id"}),
+        ["departure_date_obj"],
+        ["full_date_obj"],
+        "departure_date_id",
+        "left"
     )
-    print("After merging passengers:", flights_df.shape)
 
-    flights_df = flights_df.merge(
-        flight_statuses_df,
-        left_on=c.FLIGHT_STATUS_COLUMN,
-        right_on="name",
-        how="inner"
-    ).rename(columns={"status_id": "flight_status_id"})
-    print("After merging statutes:", flights_df.shape)
+    dep_airports_df = airports_df.rename(columns={"airport_id": "departure_airport_id", "airport_code": "departure_airport_code"})
+    arr_airports_df = airports_df.rename(columns={"airport_id": "arrival_airport_id", "airport_code": "arrival_airport_code"})
+
+    flights_df = merge_and_validate(
+        flights_df, dep_airports_df,
+        [c.DEPARTURE_AIRPORT_CODE_COLUMN],
+        ["departure_airport_code"],
+        "departure_airport_id",
+        "left"
+    )
+
+    flights_df = merge_and_validate(
+        flights_df, arr_airports_df,
+        [c.ARRIVAL_AIRPORT_CODE_COLUMN],
+        ["arrival_airport_code"],
+        "arrival_airport_id",
+        "left"
+    )
+
+    flights_df[c.PASSENGER_ID_COLUMN] = flights_df[c.PASSENGER_ID_COLUMN].astype(str).str.strip().str.replace('\u00A0', '').str.lower()
+    passengers_df["passenger_code"] = passengers_df["passenger_code"].astype(str).str.strip().str.replace('\u00A0', '').str.lower()
+
+    flights_df = merge_and_validate(
+        flights_df, passengers_df,
+        [c.PASSENGER_ID_COLUMN],
+        ["passenger_code"],
+        "passenger_id",
+        "left"
+    )
+
+    flights_df = merge_and_validate(
+        flights_df, flight_statuses_df.rename(columns={"status_id": "flight_status_id"}),
+        [c.FLIGHT_STATUS_COLUMN],
+        ["name"],
+        "flight_status_id",
+        "left"
+    )
 
     flights_df = flights_df[[
         "passenger_id", "pilot_id", "departure_airport_id",
         "arrival_airport_id", "departure_date_id", "flight_status_id"
     ]]
-    print("After every merge:", flights_df.shape)
 
     load_to_postgres(flights_df, c.FLIGHTS_TABLE, connection)
+
+def prepare_facts(df: pd.DataFrame, connection: sqlalchemy.Connection) -> None:
+    prepare_flights(df, connection)
 
 def prepare_passengers(df: pd.DataFrame, connection: sqlalchemy.Connection) -> None:
     passengers_df = df[[c.PASSENGER_ID_COLUMN, c.PASSENGER_FIRST_NAME_COLUMN, c.PASSENGER_LAST_NAME_COLUMN,
@@ -90,7 +117,7 @@ def prepare_passengers(df: pd.DataFrame, connection: sqlalchemy.Connection) -> N
     }, inplace=True)
 
     countries_df = read_from_postgres(c.COUNTRIES_TABLE, connection, ["country_id", "name"])
-    passengers_df = passengers_df.merge(countries_df, left_on="country_name", right_on="name", how="inner").rename(
+    passengers_df = merge_and_validate(passengers_df, countries_df, ["country_name"], ["name"], "country_id", "left").rename(
         columns={"country_id": "nationality_id"}
     )
     passengers_df = passengers_df[["first_name", "last_name", "gender", "age", "nationality_id", "passenger_code"]]
@@ -118,7 +145,7 @@ def prepare_airports(df: pd.DataFrame, connection: sqlalchemy.Connection) -> Non
     airports_df = pd.concat([departures_df, arrivals_df]).drop_duplicates()
 
     countries_df = read_from_postgres(c.COUNTRIES_TABLE, connection, ["country_id", "name"])
-    airports_df = airports_df.merge(countries_df, left_on="country_name", right_on="name", how="inner")
+    airports_df = merge_and_validate(airports_df, countries_df, ["country_name"], ["name"], "country_id", "left")
     airports_df = airports_df[["airport_code", "airport_name", "country_id"]]
     airports_df.rename(columns={"airport_name": "name"}, inplace=True)
 
@@ -143,7 +170,7 @@ def prepare_pilots(df: pd.DataFrame, connection: sqlalchemy.Connection) -> None:
     load_to_postgres(pilots_df, c.PILOTS_TABLE, connection)
 
 def prepare_dates(df: pd.DataFrame, connection: sqlalchemy.Connection) -> None:
-    parsed_dates = pd.to_datetime(df[c.DEPARTURE_DATE_COLUMN], format="%m/%d/%Y", errors="coerce")
+    parsed_dates = pd.to_datetime(df[c.DEPARTURE_DATE_COLUMN], format="%m/%d/%Y")
     dates_df = pd.DataFrame({"full_date": parsed_dates})
 
     dates_df["year"] = dates_df["full_date"].dt.year
@@ -171,9 +198,6 @@ def prepare_dimensions(df: pd.DataFrame, connection: sqlalchemy.Connection) -> N
     prepare_passengers(df, connection)
     prepare_flight_statuses(df, connection)
     prepare_airports(df, connection)
-
-def prepare_facts(df: pd.DataFrame, connection: sqlalchemy.Connection) -> None:
-    prepare_flights(df, connection)
 
 def transform_flight_data(df: pd.DataFrame) -> None:
     df.dropna(inplace=True)
