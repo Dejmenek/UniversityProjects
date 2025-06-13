@@ -8,6 +8,9 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from matplotlib.backends.backend_pdf import PdfPages
 
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s - %(levelname)s - %(message)s')
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'etl')))
 from constants import REPORT_QUERIES, SQL_FOLDER, REPORT_OUTPUT, TOP_ROUTES_QUERY_NAME, MONTHLY_FLIGHTS_QUERY_NAME, AIRPORT_TRAFFIC_QUERY_NAME, DB_URL
 

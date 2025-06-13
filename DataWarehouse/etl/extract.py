@@ -3,7 +3,6 @@ import pandas
 
 from constants import DTYPE_DICT
 
-
 def load_csv(file_path: str) -> pandas.DataFrame:
     try:
         df = pandas.read_csv(file_path, dtype=DTYPE_DICT)
